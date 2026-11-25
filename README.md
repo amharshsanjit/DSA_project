@@ -259,6 +259,14 @@ Explore the complete project presentation:
 **Presentation:** [Rungta R1 Smart Campus Navigation App](https://gamma.app/docs/Rungta-R1-Smart-Campus-Navigation-App-qdxwstbi03heym2)
 
 
+## 📄 Project Documentation
+
+[![View Document](https://img.shields.io/badge/Google%20Drive-View%20Document-blue?style=for-the-badge)](https://drive.google.com/file/d/16ZPdzgO4HQv2t5TT259w0gjM7ZBSTf-F/view?usp=sharing)
+
+[Open Project Documentation](https://drive.google.com/file/d/16ZPdzgO4HQv2t5TT259w0gjM7ZBSTf-F/view?usp=sharing)
+
+
+
 ## 🤝 Contributions
 
 Suggestions and improvements are welcome.
