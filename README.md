@@ -249,6 +249,16 @@ Rungta Educational Campus, Kohka–Kurud Road, Bhilai, Chhattisgarh, India.
 
 [View Campus on Google Maps](https://www.google.com/maps/search/?api=1&query=Rungta+Educational+Campus+Bhilai)
 
+
+## 📊 Project Presentation
+
+Explore the complete project presentation:
+
+[![View Presentation](https://img.shields.io/badge/Google%20Gamma-View%20Presentation-purple?style=for-the-badge)](https://gamma.app/docs/Rungta-R1-Smart-Campus-Navigation-App-qdxwstbi03heym2)
+
+**Presentation:** [Rungta R1 Smart Campus Navigation App](https://gamma.app/docs/Rungta-R1-Smart-Campus-Navigation-App-qdxwstbi03heym2)
+
+
 ## 🤝 Contributions
 
 Suggestions and improvements are welcome.
