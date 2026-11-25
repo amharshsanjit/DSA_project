@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Rungta R1 Smart Campus Navigation System • Bhilai</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Leaflet CSS & JS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            navy: { 950: '#060B18', 900: '#0B1329', 850: '#101B38', 800: '#172348', 700: '#233462' },
+            electric: { 400: '#38BDF8', 500: '#0EA5E9', 600: '#2563EB', accent: '#00F0FF' }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #060B18; color: #F8FAFC; }
+    .leaflet-popup-content-wrapper { background: #0B1329 !important; color: #F8FAFC !important; border: 1px solid #233462 !important; border-radius: 12px !important; }
+    .leaflet-popup-tip { background: #0B1329 !important; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+  <!-- Navbar -->
+  <header className="sticky top-0 z-50 bg-navy-900 border-b border-navy-800 px-6 py-3 flex items-center justify-between shadow-xl">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-700 via-blue-600 to-cyan-400 flex items-center justify-center font-black text-xl text-white shadow-lg shadow-blue-500/20">
+        R1
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="font-extrabold text-base tracking-tight text-white">RUNGTA <span class="text-electric-accent">R1</span></span>
+          <span class="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded bg-blue-900/60 text-blue-300 border border-blue-700/50">Bhilai, C.G.</span>
+        </div>
+        <div class="text-[11px] text-slate-400">Smart Campus Navigation System • Problem #82</div>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="flex items-center gap-1.5 text-xs font-semibold">
+      <button onclick="switchTab('map')" id="tab-map" class="px-3.5 py-1.5 rounded-lg bg-electric-600 text-white transition">🗺️ Campus Map</button>
+      <button onclick="switchTab('floors')" id="tab-floors" class="px-3.5 py-1.5 rounded-lg bg-navy-800 text-slate-300 hover:text-white transition">🏢 Floor Plans</button>
+      <button onclick="switchTab('directory')" id="tab-directory" class="px-3.5 py-1.5 rounded-lg bg-navy-800 text-slate-300 hover:text-white transition">📖 Directory</button>
+    </div>
+  </header>
+
+  <!-- Main Content Viewport -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-4">
+    <!-- Presets Toolbar -->
+    <div class="bg-navy-900 border border-navy-800 rounded-2xl p-3 shadow-lg flex items-center justify-between gap-2 flex-wrap text-xs">
+      <div class="flex items-center gap-2">
+        <span class="text-[10px] uppercase font-bold text-slate-400">TEST PRESETS:</span>
+        <button onclick="runPreset('node_gate', 'node_library', 'shortest')" class="px-2.5 py-1 rounded bg-navy-950 border border-navy-700 hover:border-electric-500 text-slate-300 font-semibold">Gate ➔ Central Library</button>
+        <button onclick="runPreset('node_admin', 'node_engg', 'shortest')" class="px-2.5 py-1 rounded bg-navy-950 border border-navy-700 hover:border-electric-500 text-slate-300 font-semibold">Admin ➔ Auditorium B-Block</button>
+        <button onclick="runPreset('node_admin', 'node_cs', 'fewest')" class="px-2.5 py-1 rounded bg-navy-950 border border-navy-700 hover:border-electric-500 text-slate-300 font-semibold">Admin ➔ Block C (BFS)</button>
+        <button onclick="runPreset('node_gate', 'node_sports', 'shortest')" class="px-2.5 py-1 rounded bg-navy-950 border border-navy-700 hover:border-electric-500 text-slate-300 font-semibold">Gate ➔ Sports Arena</button>
+      </div>
+      <div class="text-[11px] text-emerald-400 font-bold flex items-center gap-1.5">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span>Verified GPS: 21.2350° N, 81.3462° E</span>
+      </div>
+    </div>
+
+    <!-- Map View -->
+    <div id="view-map" class="space-y-4">
+      <div class="bg-navy-900 border border-navy-800 rounded-2xl p-4 shadow-xl flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+        <div class="flex items-center gap-3 flex-1 flex-wrap">
+          <div class="flex items-center gap-2">
+            <span class="font-bold text-emerald-400">From:</span>
+            <select id="routeFrom" class="bg-navy-950 border border-navy-700 rounded-lg px-2.5 py-1.5 text-white"></select>
+          </div>
+          <button onclick="swapRoute()" class="p-1.5 rounded bg-navy-800 border border-navy-700 text-slate-300">⇅</button>
+          <div class="flex items-center gap-2">
+            <span class="font-bold text-rose-400">To:</span>
+            <select id="routeTo" class="bg-navy-950 border border-navy-700 rounded-lg px-2.5 py-1.5 text-white"></select>
+          </div>
+          <div class="flex items-center gap-1 bg-navy-950 p-1 rounded-lg border border-navy-700">
+            <button id="btn-algo-dijkstra" onclick="setAlgo('shortest')" class="px-2.5 py-1 rounded bg-electric-600 text-white font-bold">⚡ Dijkstra Shortest</button>
+            <button id="btn-algo-bfs" onclick="setAlgo('fewest')" class="px-2.5 py-1 rounded text-slate-400 font-bold">🎯 BFS Fewest Stops</button>
+          </div>
+          <button onclick="computeRoute()" class="px-4 py-1.5 rounded-lg bg-electric-600 hover:bg-electric-500 text-white font-bold shadow-md">Find Route ➔</button>
+        </div>
+      </div>
+
+      <!-- Map Container -->
+      <div class="relative h-[560px] rounded-2xl overflow-hidden border border-navy-800 shadow-2xl">
+        <div id="map" class="w-full h-full"></div>
+
+        <!-- Route HUD Overlay -->
+        <div id="route-hud" class="hidden absolute bottom-4 left-4 right-4 md:right-auto md:max-w-md z-[500] bg-navy-900/95 backdrop-blur-md border border-electric-600/50 rounded-2xl p-4 shadow-2xl">
+          <div class="flex items-center justify-between mb-2">
+            <span id="hud-algo" class="text-[10px] font-bold px-2 py-0.5 rounded bg-electric-600/20 text-electric-400">Dijkstra Shortest</span>
+            <div class="flex items-center gap-3 text-xs">
+              <span>Dist: <strong id="hud-dist" class="text-white font-mono">150 m</strong></span>
+              <span>Time: <strong id="hud-time" class="text-white font-mono">2.0 mins</strong></span>
+              <span>Stops: <strong id="hud-stops" class="text-white font-mono">2</strong></span>
+            </div>
+          </div>
+          <div class="text-xs text-slate-300 font-semibold mb-2" id="hud-path">Gate ➔ Admin ➔ Library</div>
+          <div class="text-[11px] text-slate-400 max-h-24 overflow-y-auto space-y-1 bg-navy-950/80 p-2 rounded-lg border border-navy-800" id="hud-instructions"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Floors View -->
+    <div id="view-floors" class="hidden space-y-4">
+      <div class="bg-navy-900 border border-navy-800 rounded-2xl p-6 shadow-xl space-y-4">
+        <div class="flex items-center justify-between pb-4 border-b border-navy-800">
+          <div>
+            <h2 class="text-xl font-bold text-white">Indoor Floor Plan Navigator</h2>
+            <p class="text-xs text-slate-400">Block B Engineering & Santosh Rungta Central Auditorium (Ground Floor Blueprint)</p>
+          </div>
+          <span class="text-xs px-2.5 py-1 rounded bg-emerald-500/20 text-emerald-400 font-bold border border-emerald-500/30">✓ Verified Floor Model</span>
+        </div>
+
+        <div class="bg-navy-950 rounded-xl p-4 border border-navy-800 flex justify-center">
+          <svg viewBox="0 0 500 280" class="w-full max-w-2xl drop-shadow-xl" xmlns="http://www.w3.org/2000/svg">
+            <rect x="15" y="15" width="470" height="250" fill="#0B1329" stroke="#233462" stroke-width="3" rx="10"/>
+            <rect x="25" y="125" width="450" height="30" fill="#172348"/>
+            <text x="250" y="144" fill="#64748B" font-size="11" font-weight="bold" text-anchor="middle" letter-spacing="2">CENTRAL WALKING CORRIDOR</text>
+            <rect x="25" y="125" width="35" height="30" fill="#10B981" rx="4"/>
+            <text x="42" y="144" fill="#FFFFFF" font-size="9" font-weight="bold" text-anchor="middle">ENT</text>
+            
+            <!-- Auditorium B-Block -->
+            <rect x="30" y="25" width="140" height="90" fill="#2563EB" stroke="#00F0FF" stroke-width="2" rx="6"/>
+            <text x="100" y="65" fill="#FFFFFF" font-size="11" font-weight="bold" text-anchor="middle">SANTOSH RUNGTA AUDITORIUM</text>
+            <text x="100" y="82" fill="#E2E8F0" font-size="9" text-anchor="middle">B-BLOCK (800+ SEATS)</text>
+
+            <!-- Room 101 -->
+            <rect x="180" y="25" width="140" height="90" fill="#101B38" stroke="#334155" stroke-width="2" rx="6"/>
+            <text x="250" y="65" fill="#FFFFFF" font-size="12" font-weight="bold" text-anchor="middle">B-101 CLASSROOM</text>
+            <text x="250" y="82" fill="#94A3B8" font-size="9" text-anchor="middle">Mechanical Smart Room</text>
+
+            <!-- CAD Lab -->
+            <rect x="330" y="25" width="140" height="90" fill="#101B38" stroke="#334155" stroke-width="2" rx="6"/>
+            <text x="400" y="65" fill="#FFFFFF" font-size="12" font-weight="bold" text-anchor="middle">B-102 CAD/CAM LAB</text>
+            <text x="400" y="82" fill="#94A3B8" font-size="9" text-anchor="middle">Advanced Simulation</text>
+
+            <!-- Civil Engineering Lab -->
+            <rect x="30" y="165" width="210" height="90" fill="#101B38" stroke="#334155" stroke-width="2" rx="6"/>
+            <text x="135" y="205" fill="#FFFFFF" font-size="12" font-weight="bold" text-anchor="middle">CIVIL STRUCTURES LAB</text>
+            <text x="135" y="222" fill="#94A3B8" font-size="9" text-anchor="middle">Materials & Heavy Testing</text>
+
+            <!-- Electrical Dept -->
+            <rect x="250" y="165" width="220" height="90" fill="#101B38" stroke="#334155" stroke-width="2" rx="6"/>
+            <text x="360" y="205" fill="#FFFFFF" font-size="12" font-weight="bold" text-anchor="middle">ELECTRICAL DRIVES WORKSHOP</text>
+            <text x="360" y="222" fill="#94A3B8" font-size="9" text-anchor="middle">Robotics & IoT Station</text>
+
+            <!-- Path to Auditorium -->
+            <polyline points="42,140 100,140 100,115" fill="none" stroke="#00F0FF" stroke-width="4" stroke-dasharray="6,4" stroke-linecap="round"/>
+            <circle cx="100" cy="115" r="5" fill="#EF4444"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- Directory View -->
+    <div id="view-directory" class="hidden space-y-4">
+      <div class="bg-navy-900 border border-navy-800 rounded-2xl p-6 shadow-xl space-y-4">
+        <h2 class="text-xl font-bold text-white mb-2">Campus Institutions & Buildings Directory</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="directory-list"></div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // Data definition
+    const buildings = [
+      { id: "b_gate", name: "Main Campus Entrance & Security", code: "GATE", lat: 21.2335, lng: 81.3458, cat: "SECURITY", desc: "Kohka-Kurud Road main entrance." },
+      { id: "b_admin", name: "Block A – Administration & VC Office", code: "BLOCK-A", lat: 21.2343, lng: 81.3459, cat: "ADMIN", desc: "Directorate, Central Admissions & Management." },
+      { id: "b_engg", name: "Block B – Engineering & Central Auditorium", code: "BLOCK-B", lat: 21.2351, lng: 81.3460, cat: "ACADEMIC", desc: "Mechanical, Civil Engineering and Santosh Rungta Central Auditorium (B-Block)." },
+      { id: "b_cs", name: "Block C – Computer Science & Innovation Labs", code: "BLOCK-C", lat: 21.2355, lng: 81.3465, cat: "ACADEMIC", desc: "Apple Mac Lab, Microsoft Innovation Centre, Google Lab." },
+      { id: "b_library", name: "Dr. A.P.J. Abdul Kalam Central Library", code: "LIB", lat: 21.2348, lng: 81.3468, cat: "LIBRARY", desc: "Multi-storey library with 50,000+ volumes and digital research center." },
+      { id: "b_dental", name: "Block D & E – Dental College, Hospital & Pharmacy", code: "BLOCK-D-E", lat: 21.2358, lng: 81.3455, cat: "MEDICAL", desc: "RCDSR Dental Hospital, clinics, and Pharmacy Institutes." },
+      { id: "b_canteen", name: "Central Canteen & Nescafe", code: "CANTEEN", lat: 21.2347, lng: 81.3462, cat: "AMENITY", desc: "Student cafeteria, dining mess, and outdoor pergola." },
+      { id: "b_hostel_boys", name: "Boys Hostel Complex (Blocks H1 & H2)", code: "HOSTEL-B", lat: 21.2365, lng: 81.3470, cat: "RESIDENTIAL", desc: "Male student residential suites, gym and dining." },
+      { id: "b_hostel_girls", name: "Girls Hostel Complex", code: "HOSTEL-G", lat: 21.2362, lng: 81.3450, cat: "RESIDENTIAL", desc: "Secure female student residence and dining." },
+      { id: "b_sports", name: "Sports Arena & Athletics Turf", code: "SPORTS", lat: 21.2360, lng: 81.3480, cat: "SPORTS", desc: "Cricket pitch, basketball court and Open Air Theatre." }
+    ];
+
+    const nodes = [
+      { id: "node_gate", name: "Main Campus Entrance", lat: 21.2335, lng: 81.3458 },
+      { id: "node_admin", name: "Block A (Administration)", lat: 21.2343, lng: 81.3459 },
+      { id: "node_engg", name: "Block B (Engineering & Auditorium)", lat: 21.2351, lng: 81.3460 },
+      { id: "node_cs", name: "Block C (Computing Labs)", lat: 21.2355, lng: 81.3465 },
+      { id: "node_library", name: "Central Library", lat: 21.2348, lng: 81.3468 },
+      { id: "node_canteen", name: "Central Canteen", lat: 21.2347, lng: 81.3462 },
+      { id: "node_dental", name: "Block D & E (Dental & Pharmacy)", lat: 21.2358, lng: 81.3455 },
+      { id: "node_sports", name: "Sports Arena", lat: 21.2360, lng: 81.3480 }
+    ];
+
+    const edges = [
+      { u: "node_gate", v: "node_admin", d: 95 },
+      { u: "node_admin", v: "node_engg", d: 85 },
+      { u: "node_admin", v: "node_canteen", d: 55 },
+      { u: "node_admin", v: "node_library", d: 110 },
+      { u: "node_engg", v: "node_cs", d: 65 },
+      { u: "node_engg", v: "node_canteen", d: 50 },
+      { u: "node_engg", v: "node_dental", d: 80 },
+      { u: "node_cs", v: "node_library", d: 70 },
+      { u: "node_canteen", v: "node_library", d: 60 },
+      { u: "node_library", v: "node_sports", d: 140 }
+    ];
+
+    let currentAlgo = 'shortest';
+    let mapInstance = null;
+    let routeLayers = [];
+
+    function init() {
+      // Setup Map
+      mapInstance = L.map('map', { center: [21.2350, 81.3462], zoom: 17 });
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(mapInstance);
+
+      // Populate Selects
+      const sFrom = document.getElementById('routeFrom');
+      const sTo = document.getElementById('routeTo');
+      nodes.forEach(n => {
+        sFrom.add(new Option(n.name, n.id));
+        sTo.add(new Option(n.name, n.id));
+      });
+      sFrom.value = "node_gate";
+      sTo.value = "node_library";
+
+      // Draw Markers
+      buildings.forEach(b => {
+        const marker = L.circleMarker([b.lat, b.lng], { radius: 8, color: '#FFFFFF', weight: 2, fillColor: '#2563EB', fillOpacity: 1 });
+        marker.bindPopup(`<b>${b.name}</b><br><span style="font-size:11px;color:#94a3b8">${b.desc}</span>`);
+        marker.addTo(mapInstance);
+      });
+
+      // Draw Edges
+      edges.forEach(e => {
+        const u = nodes.find(n => n.id === e.u);
+        const v = nodes.find(n => n.id === e.v);
+        L.polyline([[u.lat, u.lng], [v.lat, v.lng]], { color: '#64748B', weight: 2, dashArray: '4,4', opacity: 0.5 }).addTo(mapInstance);
+      });
+
+      // Populate Directory
+      const dirList = document.getElementById('directory-list');
+      buildings.forEach(b => {
+        dirList.innerHTML += `
+          <div class="p-4 bg-navy-950 rounded-xl border border-navy-800">
+            <div class="flex items-center justify-between mb-1">
+              <span class="font-bold text-white text-sm">${b.name}</span>
+              <span class="text-[10px] px-2 py-0.5 rounded bg-blue-900/40 text-blue-300 font-bold">${b.code}</span>
+            </div>
+            <p class="text-xs text-slate-400 mb-2">${b.desc}</p>
+            <button onclick="navigateTo('${b.id}')" class="text-xs text-electric-400 font-bold hover:underline">Navigate Here ➔</button>
+          </div>
+        `;
+      });
+
+      computeRoute();
+    }
+
+    function switchTab(tab) {
+      document.getElementById('view-map').classList.toggle('hidden', tab !== 'map');
+      document.getElementById('view-floors').classList.toggle('hidden', tab !== 'floors');
+      document.getElementById('view-directory').classList.toggle('hidden', tab !== 'directory');
+
+      document.getElementById('tab-map').className = tab === 'map' ? 'px-3.5 py-1.5 rounded-lg bg-electric-600 text-white transition' : 'px-3.5 py-1.5 rounded-lg bg-navy-800 text-slate-300 hover:text-white transition';
+      document.getElementById('tab-floors').className = tab === 'floors' ? 'px-3.5 py-1.5 rounded-lg bg-electric-600 text-white transition' : 'px-3.5 py-1.5 rounded-lg bg-navy-800 text-slate-300 hover:text-white transition';
+      document.getElementById('tab-directory').className = tab === 'directory' ? 'px-3.5 py-1.5 rounded-lg bg-electric-600 text-white transition' : 'px-3.5 py-1.5 rounded-lg bg-navy-800 text-slate-300 hover:text-white transition';
+
+      if (tab === 'map') {
+        setTimeout(() => mapInstance.invalidateSize(), 100);
+      }
+    }
+
+    function setAlgo(algo) {
+      currentAlgo = algo;
+      document.getElementById('btn-algo-dijkstra').className = algo === 'shortest' ? 'px-2.5 py-1 rounded bg-electric-600 text-white font-bold' : 'px-2.5 py-1 rounded text-slate-400 font-bold';
+      document.getElementById('btn-algo-bfs').className = algo === 'fewest' ? 'px-2.5 py-1 rounded bg-electric-600 text-white font-bold' : 'px-2.5 py-1 rounded text-slate-400 font-bold';
+      computeRoute();
+    }
+
+    function swapRoute() {
+      const f = document.getElementById('routeFrom');
+      const t = document.getElementById('routeTo');
+      const tmp = f.value;
+      f.value = t.value;
+      t.value = tmp;
+      computeRoute();
+    }
+
+    function runPreset(f, t, algo) {
+      document.getElementById('routeFrom').value = f;
+      document.getElementById('routeTo').value = t;
+      setAlgo(algo);
+      switchTab('map');
+    }
+
+    function computeRoute() {
+      const fromId = document.getElementById('routeFrom').value;
+      const toId = document.getElementById('routeTo').value;
+
+      // Dijkstra / BFS implementation
+      const adj = {};
+      nodes.forEach(n => adj[n.id] = []);
+      edges.forEach(e => {
+        adj[e.u].push({ to: e.v, d: e.d });
+        adj[e.v].push({ to: e.u, d: e.d });
+      });
+
+      const dist = {};
+      const parent = {};
+      const visited = new Set();
+      nodes.forEach(n => { dist[n.id] = Infinity; parent[n.id] = null; });
+      dist[fromId] = 0;
+
+      if (currentAlgo === 'shortest') {
+        const pq = [{ id: fromId, d: 0 }];
+        while (pq.length > 0) {
+          pq.sort((a,b) => a.d - b.d);
+          const { id: u } = pq.shift();
+          if (visited.has(u)) continue;
+          visited.add(u);
+          if (u === toId) break;
+          for (const edge of adj[u]) {
+            if (!visited.has(edge.to) && dist[u] + edge.d < dist[edge.to]) {
+              dist[edge.to] = dist[u] + edge.d;
+              parent[edge.to] = u;
+              pq.push({ id: edge.to, d: dist[edge.to] });
+            }
+          }
+        }
+      } else {
+        const q = [fromId];
+        visited.add(fromId);
+        while (q.length > 0) {
+          const u = q.shift();
+          if (u === toId) break;
+          for (const edge of adj[u]) {
+            if (!visited.has(edge.to)) {
+              visited.add(edge.to);
+              parent[edge.to] = u;
+              q.push(edge.to);
+            }
+          }
+        }
+      }
+
+      routeLayers.forEach(l => mapInstance.removeLayer(l));
+      routeLayers = [];
+
+      if (!parent[toId] && fromId !== toId) return;
+
+      const path = [];
+      let c = toId;
+      while (c !== null) { path.push(c); c = parent[c]; }
+      path.reverse();
+
+      const pathNodes = path.map(id => nodes.find(n => n.id === id));
+      const latlngs = pathNodes.map(n => [n.lat, n.lng]);
+
+      let totalD = 0;
+      for (let i = 0; i < path.length - 1; i++) {
+        const edge = edges.find(e => (e.u === path[i] && e.v === path[i+1]) || (e.u === path[i+1] && e.v === path[i]));
+        if (edge) totalD += edge.d;
+      }
+
+      // Draw polyline
+      const line = L.polyline(latlngs, { color: '#00F0FF', weight: 5 }).addTo(mapInstance);
+      routeLayers.push(line);
+
+      // Start/End Pins
+      const startPin = L.circleMarker(latlngs[0], { radius: 8, fillColor: '#10B981', color: '#fff', weight: 2, fillOpacity: 1 }).addTo(mapInstance);
+      const endPin = L.circleMarker(latlngs[latlngs.length - 1], { radius: 9, fillColor: '#EF4444', color: '#fff', weight: 2, fillOpacity: 1 }).addTo(mapInstance);
+      routeLayers.push(startPin);
+      routeLayers.push(endPin);
+
+      // Update HUD
+      document.getElementById('route-hud').classList.remove('hidden');
+      document.getElementById('hud-algo').textContent = currentAlgo === 'shortest' ? "Dijkstra Shortest Path" : "BFS Fewest Stops";
+      document.getElementById('hud-dist').textContent = totalD + " m";
+      document.getElementById('hud-time').textContent = (totalD / 78).toFixed(1) + " mins";
+      document.getElementById('hud-stops').textContent = (path.length - 1);
+      document.getElementById('hud-path').textContent = pathNodes.map(n => n.name).join(' → ');
+
+      const instructions = document.getElementById('hud-instructions');
+      instructions.innerHTML = '';
+      for (let i = 0; i < pathNodes.length - 1; i++) {
+        instructions.innerHTML += `<div>${i+1}. Walk from <strong>${pathNodes[i].name}</strong> toward <strong>${pathNodes[i+1].name}</strong></div>`;
+      }
+    }
+
+    window.onload = init;
+  </script>
+</body>
+</html>

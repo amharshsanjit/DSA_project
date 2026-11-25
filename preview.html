@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Campus Navigator - Interactive Preview (Problem 82)</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: #0f172a; color: #f8fafc; padding: 20px; display: flex; justify-content: center; }
+    .container { max-width: 900px; width: 100%; background: #1e293b; border-radius: 16px; border: 1px solid #334155; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
+    .header { padding: 18px 24px; background: #1e293b; border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .logo { font-size: 28px; }
+    .title { font-size: 18px; font-weight: 700; color: #ffffff; }
+    .sub { font-size: 12px; color: #94a3b8; }
+    .badge { background: rgba(99, 102, 241, 0.15); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.3); padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+    
+    .presets { padding: 12px 24px; background: #0f172a; border-bottom: 1px solid #334155; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .presets span { font-size: 11px; font-weight: 700; color: #64748b; margin-right: 4px; }
+    .preset-btn { background: #1e293b; color: #cbd5e1; border: 1px solid #334155; padding: 5px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; transition: 0.2s; }
+    .preset-btn:hover { background: #334155; color: #ffffff; border-color: #64748b; }
+
+    .controls { padding: 16px 24px; background: #1e293b; display: grid; grid-template-columns: 1fr auto 1fr auto auto; gap: 12px; align-items: center; border-bottom: 1px solid #334155; }
+    .input-group label { display: block; font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 4px; }
+    select { width: 100%; background: #0f172a; color: #f8fafc; border: 1px solid #475569; padding: 8px 12px; border-radius: 8px; font-size: 13px; outline: none; }
+    .btn-swap { background: #0f172a; color: #cbd5e1; border: 1px solid #475569; border-radius: 8px; width: 36px; height: 36px; font-size: 16px; cursor: pointer; margin-top: 16px; }
+    .btn-action { padding: 10px 18px; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; border: none; transition: 0.2s; margin-top: 16px; }
+    .btn-dijkstra { background: #4f46e5; color: white; }
+    .btn-dijkstra:hover { background: #4338ca; }
+    .btn-bfs { background: #0284c7; color: white; }
+    .btn-bfs:hover { background: #0369a1; }
+
+    .map-container { position: relative; height: 340px; background: #090d16; }
+    svg { width: 100%; height: 100%; }
+
+    .result-card { padding: 20px 24px; background: #1e293b; }
+    .result-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+    .algo-pill { background: rgba(79, 70, 229, 0.2); color: #a5b4fc; border: 1px solid rgba(79, 70, 229, 0.4); padding: 4px 12px; border-radius: 6px; font-size: 12px; font-weight: 700; }
+    .metrics { display: flex; gap: 16px; }
+    .metric-item { text-align: right; }
+    .metric-label { font-size: 10px; color: #94a3b8; text-transform: uppercase; font-weight: 700; }
+    .metric-val { font-size: 18px; font-weight: 800; color: #ffffff; }
+
+    .path-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+    .node-pill { padding: 4px 10px; border-radius: 6px; font-size: 13px; font-weight: 700; }
+    .node-start { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); }
+    .node-dest { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); }
+    .node-route { background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); }
+    .arrow { color: #64748b; font-weight: bold; }
+    .error-box { background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #fca5a5; padding: 12px 16px; border-radius: 8px; font-weight: 600; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="brand">
+        <div class="logo">🧭</div>
+        <div>
+          <div class="title">Campus Navigator</div>
+          <div class="sub">Problem Statement 82 • Interactive Graph, BFS & Dijkstra Routing</div>
+        </div>
+      </div>
+      <div class="badge">Live Campus Map</div>
+    </div>
+
+    <div class="presets">
+      <span>TEST CASES:</span>
+      <button class="preset-btn" onclick="runPreset('Gate', 'Canteen', 'dijkstra')">Test 1: Gate → Canteen (Shortest)</button>
+      <button class="preset-btn" onclick="runPreset('Gate', 'Gate', 'dijkstra')">Test 2: Gate → Gate (Boundary)</button>
+      <button class="preset-btn" onclick="runPreset('Gate', 'Hostel', 'dijkstra')">Test 3: Gate → Hostel (Invalid)</button>
+      <button class="preset-btn" onclick="runPreset('Admin', 'Canteen', 'bfs')">Test 4(a): Admin → Canteen (Fewest Stops)</button>
+      <button class="preset-btn" onclick="runPreset('Admin', 'Canteen', 'dijkstra')">Test 4(b): Admin → Canteen (Shortest Dist)</button>
+    </div>
+
+    <div class="controls">
+      <div class="input-group">
+        <label>Starting Location</label>
+        <select id="startSelect" onchange="runRouting()"></select>
+      </div>
+      <button class="btn-swap" onclick="swapLocations()" title="Swap">⇅</button>
+      <div class="input-group">
+        <label>Destination Location</label>
+        <select id="destSelect" onchange="runRouting()"></select>
+      </div>
+      <button class="btn-action btn-dijkstra" onclick="setAlgorithm('dijkstra')">⚡ Shortest Distance</button>
+      <button class="btn-action btn-bfs" onclick="setAlgorithm('bfs')">🎯 Fewest Stops</button>
+    </div>
+
+    <div class="map-container">
+      <svg id="mapSvg" viewBox="0 0 760 340"></svg>
+    </div>
+
+    <div class="result-card">
+      <div class="result-top">
+        <div id="algoPill" class="algo-pill">Dijkstra's Algorithm (Shortest Distance)</div>
+        <div class="metrics">
+          <div class="metric-item">
+            <div class="metric-label">Total Distance</div>
+            <div id="metricDist" class="metric-val" style="color: #818cf8;">150 m</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-label">Total Stops</div>
+            <div id="metricStops" class="metric-val" style="color: #38bdf8;">3</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-label">Intermediate</div>
+            <div id="metricInter" class="metric-val" style="color: #fbbf24;">2</div>
+          </div>
+        </div>
+      </div>
+      <div id="routeOutput">
+        <div class="path-row" id="pathPills"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const defaultNodes = [
+      { id: 0, name: "Gate", x: 90, y: 260 },
+      { id: 1, name: "Admin", x: 280, y: 275 },
+      { id: 2, name: "Library", x: 330, y: 70 },
+      { id: 3, name: "Canteen", x: 640, y: 160 },
+      { id: 4, name: "Admin-Library", x: 305, y: 170 },
+      { id: 5, name: "Gate-Admin", x: 185, y: 268 },
+      { id: 6, name: "Library-Canteen", x: 485, y: 115 },
+      { id: 7, name: "Admin-Canteen", x: 460, y: 218 }
+    ];
+
+    const defaultEdges = [
+      { u: 0, v: 2, dist: 100 },
+      { u: 0, v: 1, dist: 50 },
+      { u: 1, v: 2, dist: 40 },
+      { u: 2, v: 3, dist: 60 },
+      { u: 1, v: 3, dist: 200 }
+    ];
+
+    let nodes = [...defaultNodes];
+    let edges = [...defaultEdges];
+    let currentAlgorithm = "dijkstra";
+    let activeRoute = { pathIds: [0, 1, 2, 3], totalDist: 150, stops: 3 };
+
+    function init() {
+      const sSel = document.getElementById("startSelect");
+      const dSel = document.getElementById("destSelect");
+      nodes.forEach(n => {
+        sSel.add(new Option(n.name, n.name));
+        dSel.add(new Option(n.name, n.name));
+      });
+      sSel.value = "Gate";
+      dSel.value = "Canteen";
+      runRouting();
+    }
+
+    function setAlgorithm(algo) {
+      currentAlgorithm = algo;
+      runRouting();
+    }
+
+    function swapLocations() {
+      const s = document.getElementById("startSelect");
+      const d = document.getElementById("destSelect");
+      const tmp = s.value;
+      s.value = d.value;
+      d.value = tmp;
+      runRouting();
+    }
+
+    function runPreset(src, dst, algo) {
+      if (src === "Hostel" || dst === "Hostel") {
+        displayError("Location Hostel not found.");
+        return;
+      }
+      document.getElementById("startSelect").value = src;
+      document.getElementById("destSelect").value = dst;
+      currentAlgorithm = algo;
+      runRouting();
+    }
+
+    function buildAdj() {
+      const adj = {};
+      nodes.forEach(n => adj[n.id] = []);
+      edges.forEach(e => {
+        adj[e.u].push({ to: e.v, dist: e.dist });
+        adj[e.v].push({ to: e.u, dist: e.dist });
+      });
+      return adj;
+    }
+
+    function dijkstra(startId, destId) {
+      if (startId === destId) return { success: true, pathIds: [startId], totalDist: 0, stops: 0 };
+      const adj = buildAdj();
+      const dist = {};
+      const parent = {};
+      const visited = {};
+      nodes.forEach(n => { dist[n.id] = Infinity; parent[n.id] = null; });
+      dist[startId] = 0;
+      const pq = [{ id: startId, dist: 0 }];
+
+      while (pq.length > 0) {
+        pq.sort((a, b) => a.dist - b.dist);
+        const { id: u } = pq.shift();
+        if (visited[u]) continue;
+        visited[u] = true;
+        if (u === destId) break;
+
+        for (const edge of adj[u]) {
+          const v = edge.to;
+          if (!visited[v] && dist[u] + edge.dist < dist[v]) {
+            dist[v] = dist[u] + edge.dist;
+            parent[v] = u;
+            pq.push({ id: v, dist: dist[v] });
+          }
+        }
+      }
+
+      if (dist[destId] === Infinity || parent[destId] === null) {
+        return { success: false, error: "No route found. Locations are disconnected." };
+      }
+
+      const path = [];
+      let curr = destId;
+      while (curr !== null) { path.push(curr); curr = parent[curr]; }
+      path.reverse();
+      return { success: true, pathIds: path, totalDist: dist[destId], stops: path.length - 1 };
+    }
+
+    function bfs(startId, destId) {
+      if (startId === destId) return { success: true, pathIds: [startId], totalDist: 0, stops: 0 };
+      const adj = buildAdj();
+      const visited = {};
+      const parent = {};
+      const queue = [startId];
+      visited[startId] = true;
+      parent[startId] = null;
+      let reached = false;
+
+      while (queue.length > 0) {
+        const u = queue.shift();
+        if (u === destId) { reached = true; break; }
+        for (const edge of adj[u]) {
+          const v = edge.to;
+          if (!visited[v]) {
+            visited[v] = true;
+            parent[v] = u;
+            queue.push(v);
+            if (v === destId) { reached = true; break; }
+          }
+        }
+        if (reached) break;
+      }
+
+      if (!reached || parent[destId] === null) {
+        return { success: false, error: "No route found. Locations are disconnected." };
+      }
+
+      const path = [];
+      let curr = destId;
+      while (curr !== null) { path.push(curr); curr = parent[curr]; }
+      path.reverse();
+
+      let totalDist = 0;
+      for (let i = 0; i < path.length - 1; i++) {
+        const u = path[i];
+        const v = path[i + 1];
+        const edge = edges.find(e => (e.u === u && e.v === v) || (e.u === v && e.v === u));
+        if (edge) totalDist += edge.dist;
+      }
+      return { success: true, pathIds: path, totalDist: totalDist, stops: path.length - 1 };
+    }
+
+    function runRouting() {
+      const srcName = document.getElementById("startSelect").value;
+      const dstName = document.getElementById("destSelect").value;
+      const startNode = nodes.find(n => n.name === srcName);
+      const destNode = nodes.find(n => n.name === dstName);
+
+      if (!startNode || !destNode) {
+        displayError(`Location ${!startNode ? srcName : dstName} not found.`);
+        return;
+      }
+
+      const res = currentAlgorithm === "dijkstra" ? dijkstra(startNode.id, destNode.id) : bfs(startNode.id, destNode.id);
+      activeRoute = res;
+
+      document.getElementById("algoPill").textContent = currentAlgorithm === "dijkstra" 
+        ? "Dijkstra's Algorithm (Shortest Distance)" 
+        : "BFS Algorithm (Fewest Stops)";
+
+      if (!res.success) {
+        displayError(res.error);
+        return;
+      }
+
+      document.getElementById("metricDist").textContent = res.totalDist + " m";
+      document.getElementById("metricStops").textContent = res.stops;
+      document.getElementById("metricInter").textContent = Math.max(0, res.pathIds.length - 2);
+
+      const pBox = document.getElementById("pathPills");
+      pBox.innerHTML = "";
+      res.pathIds.forEach((id, idx) => {
+        const n = nodes.find(item => item.id === id);
+        const pill = document.createElement("span");
+        pill.className = "node-pill " + (idx === 0 ? "node-start" : idx === res.pathIds.length - 1 ? "node-dest" : "node-route");
+        pill.textContent = n.name;
+        pBox.appendChild(pill);
+        if (idx < res.pathIds.length - 1) {
+          const arr = document.createElement("span");
+          arr.className = "arrow";
+          arr.textContent = "→";
+          pBox.appendChild(arr);
+        }
+      });
+
+      renderMap();
+    }
+
+    function displayError(msg) {
+      document.getElementById("metricDist").textContent = "—";
+      document.getElementById("metricStops").textContent = "—";
+      document.getElementById("metricInter").textContent = "—";
+      document.getElementById("pathPills").innerHTML = `<div class="error-box">⚠️ ${msg}</div>`;
+      activeRoute = null;
+      renderMap();
+    }
+
+    function renderMap() {
+      const svg = document.getElementById("mapSvg");
+      svg.innerHTML = "";
+
+      const activeEdges = new Set();
+      const activeNodes = new Set();
+      if (activeRoute && activeRoute.success && activeRoute.pathIds) {
+        activeRoute.pathIds.forEach(id => activeNodes.add(id));
+        for (let i = 0; i < activeRoute.pathIds.length - 1; i++) {
+          const u = activeRoute.pathIds[i];
+          const v = activeRoute.pathIds[i + 1];
+          activeEdges.add(`${Math.min(u, v)}-${Math.max(u, v)}`);
+        }
+      }
+
+      // Edges
+      edges.forEach(e => {
+        const u = nodes.find(n => n.id === e.u);
+        const v = nodes.find(n => n.id === e.v);
+        const key = `${Math.min(e.u, e.v)}-${Math.max(e.u, e.v)}`;
+        const isHigh = activeEdges.has(key);
+
+        if (isHigh) {
+          const glow = document.createElementNS("http://www.w3.org/2000/svg", "line");
+          glow.setAttribute("x1", u.x); glow.setAttribute("y1", u.y);
+          glow.setAttribute("x2", v.x); glow.setAttribute("y2", v.y);
+          glow.setAttribute("stroke", "#6366f1");
+          glow.setAttribute("stroke-opacity", "0.4");
+          glow.setAttribute("stroke-width", "10");
+          glow.setAttribute("stroke-linecap", "round");
+          svg.appendChild(glow);
+        }
+
+        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        line.setAttribute("x1", u.x); line.setAttribute("y1", u.y);
+        line.setAttribute("x2", v.x); line.setAttribute("y2", v.y);
+        line.setAttribute("stroke", isHigh ? "#4f46e5" : "#334155");
+        line.setAttribute("stroke-width", isHigh ? "4" : "2");
+        line.setAttribute("stroke-linecap", "round");
+        svg.appendChild(line);
+
+        // Distance pill
+        const mx = (u.x + v.x) / 2;
+        const my = (u.y + v.y) / 2;
+
+        const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        rect.setAttribute("x", mx - 18); rect.setAttribute("y", my - 9);
+        rect.setAttribute("width", "36"); rect.setAttribute("height", "18");
+        rect.setAttribute("rx", "9");
+        rect.setAttribute("fill", isHigh ? "#4f46e5" : "#1e293b");
+        rect.setAttribute("stroke", isHigh ? "#818cf8" : "#475569");
+        svg.appendChild(rect);
+
+        const txt = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        txt.setAttribute("x", mx); txt.setAttribute("y", my + 4);
+        txt.setAttribute("text-anchor", "middle");
+        txt.setAttribute("fill", isHigh ? "#ffffff" : "#94a3b8");
+        txt.setAttribute("font-size", "10");
+        txt.setAttribute("font-weight", "bold");
+        txt.textContent = e.dist + "m";
+        svg.appendChild(txt);
+      });
+
+      // Nodes
+      const startId = activeRoute && activeRoute.success && activeRoute.pathIds ? activeRoute.pathIds[0] : -1;
+      const destId = activeRoute && activeRoute.success && activeRoute.pathIds ? activeRoute.pathIds[activeRoute.pathIds.length - 1] : -1;
+
+      nodes.forEach(n => {
+        let col = "#475569";
+        let fill = "#1e293b";
+        let tag = null;
+
+        if (n.id === startId && n.id === destId) { col = "#10b981"; tag = "START & DEST"; }
+        else if (n.id === startId) { col = "#10b981"; tag = "START"; }
+        else if (n.id === destId) { col = "#ef4444"; tag = "DEST"; }
+        else if (activeNodes.has(n.id)) { col = "#f59e0b"; tag = "ROUTE"; }
+
+        const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        c.setAttribute("cx", n.x); c.setAttribute("cy", n.y); c.setAttribute("r", "16");
+        c.setAttribute("fill", fill);
+        c.setAttribute("stroke", col);
+        c.setAttribute("stroke-width", activeNodes.has(n.id) ? "3" : "2");
+        c.style.cursor = "pointer";
+        c.onclick = () => { document.getElementById("destSelect").value = n.name; runRouting(); };
+        svg.appendChild(c);
+
+        const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        dot.setAttribute("cx", n.x); dot.setAttribute("cy", n.y); dot.setAttribute("r", "5");
+        dot.setAttribute("fill", col);
+        svg.appendChild(dot);
+
+        const lbl = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        lbl.setAttribute("x", n.x); lbl.setAttribute("y", n.y + 30);
+        lbl.setAttribute("text-anchor", "middle");
+        lbl.setAttribute("fill", "#f8fafc");
+        lbl.setAttribute("font-size", "11");
+        lbl.setAttribute("font-weight", "600");
+        lbl.textContent = n.name;
+        svg.appendChild(lbl);
+
+        if (tag) {
+          const bg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+          bg.setAttribute("x", n.x - 22); bg.setAttribute("y", n.y - 28);
+          bg.setAttribute("width", "44"); bg.setAttribute("height", "13");
+          bg.setAttribute("rx", "4");
+          bg.setAttribute("fill", col);
+          svg.appendChild(bg);
+
+          const tt = document.createElementNS("http://www.w3.org/2000/svg", "text");
+          tt.setAttribute("x", n.x); tt.setAttribute("y", n.y - 18);
+          tt.setAttribute("text-anchor", "middle");
+          tt.setAttribute("fill", "#ffffff");
+          tt.setAttribute("font-size", "8");
+          tt.setAttribute("font-weight", "bold");
+          tt.textContent = tag;
+          svg.appendChild(tt);
+        }
+      });
+    }
+
+    window.onload = init;
+  </script>
+</body>
+</html>
